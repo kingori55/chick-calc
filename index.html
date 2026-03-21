@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ChickCalc"/>
+<meta name="theme-color" content="#2C1A0E"/>
+<meta name="description" content="Track chick farming inputs, losses and selling price per flock."/>
+<title>Chick Cost Calculator</title>
+<link rel="manifest" href="manifest.json"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root { --money: 'Barlow Condensed', sans-serif; }
+</style>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --soil: #2C1A0E;
+  --bark: #5C3D1E;
+  --straw: #E8C97A;
+  --leaf: #4A7C59;
+  --leaf-light: #6BAF7E;
+  --sun: #F4A825;
+  --cream: #FDF6E3;
+  --sand: #EEE0C0;
+  --danger: #C0392B;
+  --shadow: rgba(44,26,14,0.14);
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--soil);
+  color: var(--straw);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 14px;
+  box-shadow: 0 3px 16px var(--shadow);
+  flex-shrink: 0;
+  z-index: 100;
+  position: sticky;
+  top: 0;
+}
+.topbar .menu-btn {
+  background: none; border: none;
+  color: var(--straw); font-size: 1.3rem;
+  cursor: pointer; padding: 6px 8px;
+  border-radius: 7px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.topbar .menu-btn:hover { background: rgba(255,255,255,0.1); }
+.topbar .logo { font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; flex: 1; }
+.topbar .active-flock-name {
+  font-size: 0.82rem; color: #b89a6a;
+  font-style: italic;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 200px;
+}
+.currency-select {
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid rgba(232,201,122,0.3);
+  border-radius: 7px; color: var(--straw);
+  padding: 5px 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+  outline: none; cursor: pointer; flex-shrink: 0;
+}
+.currency-select option { background: var(--soil); color: var(--cream); }
+
+/* ── LAYOUT ── */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 270px;
+  background: var(--bark);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: transform 0.28s cubic-bezier(.4,0,.2,1), box-shadow 0.28s;
+  position: relative;
+  z-index: 50;
+  overflow: hidden;
+}
+.sidebar.collapsed {
+  transform: translateX(-270px);
+  box-shadow: none;
+  width: 0;
+  min-width: 0;
+}
+.sidebar-header {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-header h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--straw); margin-bottom: 12px;
+}
+.btn-new-flock {
+  width: 100%;
+  background: var(--leaf); color: white; border: none;
+  border-radius: 8px; padding: 10px 14px;
+  font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+  transition: background 0.18s;
+}
+.btn-new-flock:hover { background: var(--leaf-light); }
+
+.flock-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.flock-list::-webkit-scrollbar { width: 5px; }
+.flock-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+.flock-item {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 9px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: background 0.14s;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.flock-item:hover { background: rgba(255,255,255,0.12); }
+.flock-item.active { background: var(--cream); }
+.flock-item-body {
+  flex: 1;
+  padding: 11px 13px;
+  min-width: 0;
+}
+.flock-item-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem; font-weight: 700;
+  color: var(--cream);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.flock-item.active .flock-item-name { color: var(--soil); }
+.flock-item-meta {
+  font-size: 0.7rem; color: rgba(255,255,255,0.5);
+  margin-top: 2px;
+}
+.flock-item.active .flock-item-meta { color: #888; }
+.flock-item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.flock-item:hover .flock-item-actions,
+.flock-item.active .flock-item-actions { opacity: 1; }
+.flock-action-btn {
+  background: none; border: none;
+  cursor: pointer; padding: 3px 5px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  transition: all 0.13s;
+  line-height: 1;
+}
+.flock-item.active .flock-action-btn { color: #888; }
+.flock-action-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+.flock-action-btn.del:hover { background: var(--danger); color: white; }
+
+/* inline rename input */
+.rename-input {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem; font-weight: 700;
+  background: rgba(255,255,255,0.15);
+  border: 1.5px solid var(--straw);
+  border-radius: 5px;
+  color: var(--straw);
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+}
+.flock-item.active .rename-input { background: rgba(0,0,0,0.06); color: var(--soil); border-color: var(--leaf); }
+
+.sidebar-footer {
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+}
+.save-indicator {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.7rem; color: rgba(255,255,255,0.4);
+}
+.save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--leaf-light); }
+.save-dot.saving { background: var(--sun); animation: pulse 0.6s infinite alternate; }
+@keyframes pulse { to { opacity: 0.3; } }
+
+/* ── MAIN CONTENT ── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--cream);
+  background-image:
+    radial-gradient(ellipse at 10% 0%, #f5e8c4 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 100%, #d4eaf7 0%, transparent 50%);
+  transition: all 0.28s;
+}
+.main-inner { max-width: 900px; margin: 0 auto; padding: 28px 24px 60px; }
+
+/* no flock selected */
+.no-flock {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 60vh;
+  text-align: center; color: #bbb;
+}
+.no-flock .big { font-size: 3.5rem; margin-bottom: 16px; }
+.no-flock h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; color: #999; margin-bottom: 8px; }
+.no-flock p { font-size: 0.85rem; }
+
+/* ── FLOCK SETUP CARD ── */
+.flock-card {
+  background: var(--soil); border-radius: 16px;
+  padding: 22px 26px; color: var(--cream);
+  margin-bottom: 26px;
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 18px; align-items: end;
+  box-shadow: 0 8px 32px var(--shadow);
+}
+.flock-card label {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--straw); display: block; margin-bottom: 7px;
+}
+.flock-card input, .flock-card select {
+  width: 100%;
+  background: rgba(255,255,255,0.09);
+  border: 1.5px solid rgba(232,201,122,0.3);
+  border-radius: 8px; color: var(--cream);
+  padding: 9px 13px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.92rem;
+  outline: none; transition: border-color 0.2s;
+}
+.flock-card input:focus { border-color: var(--straw); }
+.flock-card input[readonly] { opacity: 0.65; cursor: default; }
+
+/* ── SUMMARY STRIP ── */
+.summary-strip {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 12px; margin-bottom: 26px;
+}
+.stat-box {
+  background: white; border-radius: 12px;
+  padding: 15px 16px; box-shadow: 0 2px 10px var(--shadow);
+  border-top: 4px solid var(--leaf);
+  transition: transform 0.15s;
+}
+.stat-box.s2 { border-top-color: var(--sun); }
+.stat-box.s3 { border-top-color: var(--leaf-light); }
+.stat-box.s4 { border-top-color: var(--bark); }
+.stat-box:hover { transform: translateY(-2px); }
+.stat-box .lbl { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #777; margin-bottom: 4px; }
+.stat-box .val { font-family: var(--money); font-size: 1.6rem; font-weight: 800; color: var(--soil); word-break: break-all; letter-spacing: 0.01em; }
+.stat-box .sub { font-size: 0.68rem; color: #888; margin-top: 3px; }
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--bark); margin-bottom: 11px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after { content:''; flex:1; height:1px; background: var(--sand); }
+
+/* ── FORM GROUP ── */
+.form-group label {
+  font-size: 0.67rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: #333; display: block; margin-bottom: 5px;
+}
+.form-group input, .form-group select {
+  width: 100%; border: 1.5px solid #d0c4ae;
+  border-radius: 8px; padding: 9px 11px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.89rem;
+  color: var(--soil); outline: none; background: white;
+  transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--leaf); }
+
+/* ── ADD FORM ── */
+.add-form {
+  background: white; border-radius: 14px;
+  padding: 18px 20px; box-shadow: 0 2px 10px var(--shadow);
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 0.65fr 0.65fr auto;
+  gap: 10px; align-items: end;
+}
+.btn-add {
+  background: var(--leaf); color: white; border: none;
+  border-radius: 8px; padding: 9px 16px;
+  font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.18s, transform 0.1s;
+}
+.btn-add:hover { background: var(--leaf-light); }
+.btn-add:active { transform: scale(0.97); }
+
+/* ── TABLE ── */
+.inputs-table-wrap {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 10px var(--shadow);
+  overflow: hidden; margin-bottom: 26px;
+}
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--soil); }
+thead th {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--straw); padding: 11px 13px; text-align: left;
+}
+thead th:last-child { text-align: center; }
+tbody tr { border-bottom: 1px solid #ede4d4; transition: background 0.12s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #fdf9f0; }
+td { padding: 11px 13px; font-size: 0.85rem; color: #1a0e05; }
+td .cat-badge {
+  display: inline-block; padding: 3px 9px;
+  border-radius: 20px; font-size: 0.68rem; font-weight: 700;
+  background: #e8f5ee; color: #1f5c35; border: 1px solid #a8d4b8;
+}
+td.amt { font-family: var(--money); font-size: 1rem; font-weight: 700; color: var(--leaf); letter-spacing: 0.02em; }
+td.ctr { text-align: center; }
+.btn-del {
+  background: none; border: 1.5px solid #ccc;
+  border-radius: 6px; padding: 3px 9px;
+  font-size: 0.72rem; color: var(--danger);
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-del:hover { background: var(--danger); color: white; border-color: var(--danger); }
+.empty-state { text-align: center; padding: 32px; color: #aaa; font-size: 0.84rem; }
+.empty-state .big { font-size: 2rem; margin-bottom: 8px; }
+
+/* ── LOSS LOG ── */
+.loss-log {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 10px var(--shadow);
+  overflow: hidden; margin-bottom: 26px;
+}
+.loss-log-form {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr 0.65fr 1.4fr auto;
+  gap: 10px; align-items: end;
+  border-bottom: 1px solid #ede4d4;
+  background: #fdf9f0;
+}
+.loss-entry {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px; border-bottom: 1px solid #ede4d4;
+  font-size: 0.84rem;
+}
+.loss-entry:last-child { border-bottom: none; }
+.loss-entry .dt  { color: #333; font-size: 0.76rem; font-weight: 600; min-width: 108px; }
+.loss-entry .cnt { font-family: 'Syne', sans-serif; font-weight: 800; color: var(--danger); min-width: 52px; }
+.loss-entry .rsn { flex:1; color: #111; }
+.loss-entry .dl {
+  background: none; border: 1.5px solid #ccc;
+  border-radius: 6px; padding: 3px 8px;
+  color: var(--danger); cursor: pointer;
+  font-size: 0.72rem; font-weight: 700;
+  transition: all 0.15s;
+}
+.loss-entry .dl:hover { background: var(--danger); color: white; border-color: var(--danger); }
+.loss-empty { padding: 16px 22px; color: #777; font-size: 0.81rem; font-style: italic; }
+.btn-log {
+  background: var(--danger); color: white; border: none;
+  border-radius: 8px; padding: 9px 14px;
+  font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+}
+.btn-log:hover { opacity: 0.85; }
+
+/* ── SELLING CONFIG ── */
+.selling-config {
+  background: var(--bark); border-radius: 14px;
+  padding: 20px 24px; color: var(--cream);
+  display: flex; align-items: center;
+  gap: 26px; flex-wrap: wrap;
+  box-shadow: 0 4px 18px var(--shadow);
+  margin-bottom: 26px;
+}
+.sc-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--straw); margin-bottom: 7px;
+}
+.margin-input {
+  width: 85px;
+  background: rgba(255,255,255,0.12);
+  border: 1.5px solid rgba(232,201,122,0.4);
+  border-radius: 8px; color: var(--sun);
+  padding: 6px 9px;
+  font-family: var(--money); font-size: 1.6rem; font-weight: 800; letter-spacing: 0.02em;
+  outline: none; text-align: center; transition: border-color 0.2s;
+}
+.margin-input:focus { border-color: var(--sun); }
+.price-display { font-family: var(--money); font-size: 1.55rem; font-weight: 800; color: var(--straw); letter-spacing: 0.02em; }
+.sc-explain { font-size: 0.75rem; color: #c4a97a; margin-top: 4px; }
+.sc-divider { border-left: 1px solid rgba(255,255,255,0.14); padding-left: 24px; }
+
+/* ── BREAKDOWN ── */
+.breakdown {
+  background: white; border-radius: 14px;
+  padding: 20px 22px; box-shadow: 0 2px 10px var(--shadow);
+}
+.bk-row { display: flex; align-items: center; gap: 11px; margin-bottom: 11px; }
+.bk-row:last-child { margin-bottom: 0; }
+.bk-name { flex:1; font-size: 0.83rem; color: #111; }
+.bk-bar-wrap { flex:2; height:9px; background:#ede4d4; border-radius:5px; overflow:hidden; }
+.bk-bar { height:100%; border-radius:5px; transition: width 0.4s ease; }
+.bk-amt { font-family: var(--money); font-size: 0.95rem; font-weight: 700; min-width: 135px; text-align: right; letter-spacing: 0.02em; }
+.bk-pct { font-size: 0.68rem; color: #888; font-weight: 400; }
+
+/* ── OVERLAY (mobile) ── */
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 40;
+}
+.sidebar-overlay.show { display: block; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 820px) {
+  .sidebar {
+    position: fixed;
+    top: 56px; left: 0; bottom: 0;
+    z-index: 60;
+    transform: translateX(-270px);
+    transition: transform 0.26s cubic-bezier(.4,0,.2,1);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .layout { display: block; }
+  .main { height: calc(100vh - 56px); }
+}
+@media (max-width: 700px) {
+  .flock-card    { grid-template-columns: 1fr 1fr; }
+  .summary-strip { grid-template-columns: 1fr 1fr; }
+  .add-form      { grid-template-columns: 1fr 1fr; }
+  .add-form .btn-add { grid-column: span 2; }
+  .loss-log-form { grid-template-columns: 1fr 1fr; }
+  .loss-log-form .btn-log { grid-column: span 2; }
+}
+@media (max-width: 480px) {
+  .flock-card    { grid-template-columns: 1fr; }
+  .add-form      { grid-template-columns: 1fr; }
+  .add-form .btn-add { grid-column: 1; }
+  .loss-log-form { grid-template-columns: 1fr; }
+  .loss-log-form .btn-log { grid-column: 1; }
+  .selling-config { flex-direction: column; align-items: flex-start; }
+  .sc-divider { border-left: none; border-top: 1px solid rgba(255,255,255,0.14); padding-left: 0; padding-top: 14px; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <button class="menu-btn" onclick="toggleSidebar()" title="Toggle menu">☰</button>
+  <div class="logo">🐥 Chick Cost Calculator</div>
+  <div class="active-flock-name" id="topbarFlockName"></div>
+  <select class="currency-select" id="globalCurrency" onchange="save();renderFlock()">
+    <option value="KSh">KSh — Kenya</option>
+    <option value="UGX">UGX — Uganda</option>
+    <option value="TZS">TZS — Tanzania</option>
+    <option value="USD">USD — Dollar</option>
+    <option value="NGN">NGN — Naira</option>
+    <option value="ZAR">ZAR — Rand</option>
+  </select>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>📋 My Flocks</h2>
+      <button class="btn-new-flock" onclick="createFlock()">
+        <span style="font-size:1.1rem">＋</span> New Flock
+      </button>
+    </div>
+    <div class="flock-list" id="flockList"></div>
+    <div class="sidebar-footer">
+      <div class="save-indicator">
+        <div class="save-dot" id="saveDot"></div>
+        <span id="saveLabel">All changes saved</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <div class="main-inner" id="mainContent">
+      <div class="no-flock">
+        <div class="big">🐣</div>
+        <h3>No flock selected</h3>
+        <p>Open the menu and create your first flock to get started.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'chickCalcData_v2';
+let state = { flocks: [], activeFlock: null, currency: 'KSh' };
+let nextFlockId = 1;
+let nextItemId  = 1;
+let nextLossId  = 1;
+let renamingId  = null;
+let sidebarOpen = true;
+let saveTimer   = null;
+
+// ── PERSIST ──────────────────────────────────────────────────────────────────
+function save() {
+  // update currency in state
+  state.currency = document.getElementById('globalCurrency').value;
+  showSaving();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        state, nextFlockId, nextItemId, nextLossId
+      }));
+    } catch(e) {}
+    showSaved();
+  }, 400);
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    state        = d.state;
+    nextFlockId  = d.nextFlockId  || 1;
+    nextItemId   = d.nextItemId   || 1;
+    nextLossId   = d.nextLossId   || 1;
+    // restore currency selector
+    document.getElementById('globalCurrency').value = state.currency || 'KSh';
+    return true;
+  } catch(e) { return false; }
+}
+
+function showSaving() {
+  document.getElementById('saveDot').className   = 'save-dot saving';
+  document.getElementById('saveLabel').textContent = 'Saving…';
+}
+function showSaved() {
+  document.getElementById('saveDot').className   = 'save-dot';
+  document.getElementById('saveLabel').textContent = 'All changes saved';
+}
+
+// ── SIDEBAR TOGGLE ───────────────────────────────────────────────────────────
+function toggleSidebar() {
+  const sb  = document.getElementById('sidebar');
+  const ov  = document.getElementById('overlay');
+  const isMobile = window.innerWidth <= 820;
+  if (isMobile) {
+    sidebarOpen = !sb.classList.contains('open');
+    sb.classList.toggle('open', sidebarOpen);
+    ov.classList.toggle('show', sidebarOpen);
+  } else {
+    sidebarOpen = !sidebarOpen;
+    sb.classList.toggle('collapsed', !sidebarOpen);
+  }
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── FLOCK CRUD ───────────────────────────────────────────────────────────────
+function createFlock() {
+  const id   = nextFlockId++;
+  const name = `Flock ${id}`;
+  state.flocks.push({ id, name, chicks: 100, items: [], losses: [], margin: 30 });
+  state.activeFlock = id;
+  save();
+  renderSidebar();
+  renderFlock();
+  // start renaming immediately
+  startRename(id);
+}
+
+function deleteFlock(id) {
+  if (state.flocks.length === 1) { alert('You need at least one flock.'); return; }
+  const f = state.flocks.find(f => f.id === id);
+  if (!confirm(`Delete "${f.name}"? This cannot be undone.`)) return;
+  state.flocks = state.flocks.filter(f => f.id !== id);
+  if (state.activeFlock === id) state.activeFlock = state.flocks[0].id;
+  save();
+  renderSidebar();
+  renderFlock();
+}
+
+function switchFlock(id) {
+  state.activeFlock = id;
+  save();
+  renderSidebar();
+  renderFlock();
+  if (window.innerWidth <= 820) closeSidebar();
+}
+
+function getActive() { return state.flocks.find(f => f.id === state.activeFlock); }
+
+// ── RENAME ───────────────────────────────────────────────────────────────────
+function startRename(id) {
+  renamingId = id;
+  renderSidebar();
+  const inp = document.getElementById('ri-'+id);
+  if (inp) { inp.focus(); inp.select(); }
+}
+
+function commitRename(id) {
+  const inp = document.getElementById('ri-'+id);
+  if (inp) {
+    const f = state.flocks.find(f => f.id === id);
+    if (f) f.name = inp.value.trim() || f.name;
+  }
+  renamingId = null;
+  save();
+  renderSidebar();
+  renderFlock(); // update topbar name too
+}
+
+// ── SIDEBAR RENDER ───────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('flockList');
+  if (state.flocks.length === 0) {
+    list.innerHTML = `<div style="padding:20px 14px;color:rgba(255,255,255,0.35);font-size:0.8rem;font-style:italic">No flocks yet. Click "New Flock" above.</div>`;
+    return;
+  }
+  list.innerHTML = state.flocks.map(f => {
+    const isActive = f.id === state.activeFlock;
+    const isRenaming = f.id === renamingId;
+    const totalCost = f.items.reduce((s,i)=>s+i.total,0);
+    const losses = f.losses.reduce((s,l)=>s+l.count,0);
+    const sellable = Math.max(0, f.chicks - losses);
+    const cur = state.currency;
+
+    const nameHtml = isRenaming
+      ? `<input id="ri-${f.id}" class="rename-input"
+            value="${esc(f.name)}"
+            onblur="commitRename(${f.id})"
+            onkeydown="if(event.key==='Enter')commitRename(${f.id});else if(event.key==='Escape')commitRename(${f.id})"
+            onclick="event.stopPropagation()" />`
+      : `<div class="flock-item-name">${esc(f.name)}</div>`;
+
+    return `
+      <div class="flock-item ${isActive?'active':''}" onclick="switchFlock(${f.id})">
+        <div class="flock-item-body">
+          ${nameHtml}
+          <div class="flock-item-meta">${f.chicks} chicks · ${sellable} to sell · ${cur} ${fmt(totalCost)}</div>
+        </div>
+        <div class="flock-item-actions">
+          <button class="flock-action-btn" onclick="event.stopPropagation();startRename(${f.id})" title="Rename">✏️</button>
+          <button class="flock-action-btn del" onclick="event.stopPropagation();deleteFlock(${f.id})" title="Delete">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmt(n) {
+  if (isNaN(n)||!isFinite(n)) return '0.00';
+  if (n>=1_000_000) return (n/1_000_000).toFixed(2)+'M';
+  if (n>=1_000)     return (n/1_000).toFixed(2)+'K';
+  return n.toFixed(2);
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function fmtDate(str) {
+  if (!str) return '—';
+  return new Date(str+'T00:00:00').toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function cur() { return state.currency; }
+
+// ── MAIN CONTENT RENDER ──────────────────────────────────────────────────────
+function renderFlock() {
+  const f = getActive();
+  const topName = document.getElementById('topbarFlockName');
+
+  if (!f) {
+    topName.textContent = '';
+    document.getElementById('mainContent').innerHTML = `
+      <div class="no-flock">
+        <div class="big">🐣</div>
+        <h3>No flock selected</h3>
+        <p>Open the menu and create your first flock to get started.</p>
+      </div>`;
+    return;
+  }
+
+  topName.textContent = f.name;
+  const c = cur();
+
+  const totalLosses  = f.losses.reduce((s,l)=>s+l.count, 0);
+  const sellable     = Math.max(0, f.chicks - totalLosses);
+  const totalCost    = f.items.reduce((s,i)=>s+i.total, 0);
+  const lossPct      = f.chicks>0 ? ((totalLosses/f.chicks)*100).toFixed(1) : '0.0';
+  const margin       = f.margin/100;
+  const costPerChick = sellable>0 ? totalCost/sellable : 0;
+  const sellPrice    = (margin<1 && sellable>0) ? costPerChick/(1-margin) : 0;
+  const revenue      = sellPrice * sellable;
+  const profit       = revenue - totalCost;
+
+  const CAT_COLORS = ['#4A7C59','#5C3D1E','#F4A825','#6BAF7E','#C0392B','#2980b9','#8e44ad'];
+  const cats = {};
+  f.items.forEach(it => { cats[it.cat]=(cats[it.cat]||0)+it.total; });
+  const catsSorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+
+  document.getElementById('mainContent').innerHTML = `
+
+    <div class="section-title">🐔 Flock Setup</div>
+    <div class="flock-card">
+      <div>
+        <label>Batch / Flock Name</label>
+        <input type="text" value="${esc(f.name)}"
+          oninput="getActive().name=this.value||getActive().name;renderSidebar();document.getElementById('topbarFlockName').textContent=this.value;"
+          onblur="save()" />
+      </div>
+      <div>
+        <label>Number of Chicks Started</label>
+        <input type="number" value="${f.chicks}" min="1"
+          oninput="getActive().chicks=Math.max(1,parseInt(this.value)||1);save();renderFlock()" />
+      </div>
+      <div>
+        <label>Chicks to Sell <span style="opacity:0.5;font-weight:300">(after losses)</span></label>
+        <input type="text" readonly
+          value="${sellable} chick${sellable!==1?'s':''} — ${totalLosses} lost (${lossPct}%)" />
+      </div>
+    </div>
+
+    <div class="summary-strip">
+      <div class="stat-box">
+        <div class="lbl">Total Cost</div>
+        <div class="val">${c} ${fmt(totalCost)}</div>
+        <div class="sub">all inputs combined</div>
+      </div>
+      <div class="stat-box s2">
+        <div class="lbl">Chicks to Sell</div>
+        <div class="val">${sellable}</div>
+        <div class="sub">${totalLosses} loss${totalLosses!==1?'es':''} (${lossPct}%)</div>
+      </div>
+      <div class="stat-box s3">
+        <div class="lbl">Cost per Chick</div>
+        <div class="val">${c} ${fmt(costPerChick)}</div>
+        <div class="sub">break-even point</div>
+      </div>
+      <div class="stat-box s4">
+        <div class="lbl">Suggested Sell Price</div>
+        <div class="val">${c} ${fmt(sellPrice)}</div>
+        <div class="sub">${f.margin}% margin</div>
+      </div>
+    </div>
+
+    <div class="section-title">💀 Loss / Death Log</div>
+    <div class="loss-log">
+      <div class="loss-log-form">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="lossDate" value="${todayStr()}" />
+        </div>
+        <div class="form-group">
+          <label>No. of Deaths</label>
+          <input type="number" id="lossCount" value="1" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Reason / Note <span style="opacity:0.55;font-weight:300">(optional)</span></label>
+          <input type="text" id="lossReason" placeholder="e.g. Disease, cold stress…" />
+        </div>
+        <button class="btn-log" onclick="addLoss()">+ Log Loss</button>
+      </div>
+      <div id="lossEntries">
+        ${f.losses.length===0
+          ? '<div class="loss-empty">No losses logged yet for this flock.</div>'
+          : f.losses.map(l=>`
+              <div class="loss-entry">
+                <span class="dt">📅 ${fmtDate(l.date)}</span>
+                <span class="cnt">−${l.count} 🐥</span>
+                <span class="rsn">${l.reason ? esc(l.reason) : '<em style="color:#888">No reason noted</em>'}</span>
+                <button class="dl" onclick="deleteLoss(${l.id})">✕ Remove</button>
+              </div>`).join('')
+        }
+      </div>
+    </div>
+
+    <div class="section-title">➕ Add an Input / Expense</div>
+    <div class="add-form">
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="itemName" placeholder="e.g. Starter Feed 50 kg" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="itemCategory">
+          <option value="Day-old Chicks (DOCs)">🐣 Day-old Chicks (DOCs)</option>
+          <option value="Feed">🌾 Feed (Starter / Grower / Finisher)</option>
+          <option value="Vaccines &amp; Medication">💉 Vaccines &amp; Medication</option>
+          <option value="Labour &amp; Utilities">👷 Labour &amp; Utilities</option>
+          <option value="Equipment">🧰 Equipment</option>
+          <option value="Other">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="itemQty" value="1" min="0.01" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label>Unit Cost (${c})</label>
+        <input type="number" id="itemCost" placeholder="0.00" min="0" step="0.01" />
+      </div>
+      <button class="btn-add" onclick="addItem()">+ Add</button>
+    </div>
+
+    <div class="section-title">📋 Inputs Record</div>
+    <div class="inputs-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Item</th><th>Category</th>
+            <th>Qty</th><th>Unit Cost</th><th>Total</th>
+            <th style="text-align:center">Remove</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${f.items.length===0
+            ? `<tr><td colspan="7"><div class="empty-state"><div class="big">🌱</div>No inputs yet — add your first expense above.</div></td></tr>`
+            : f.items.map((it,idx)=>`
+                <tr>
+                  <td style="color:#999;font-size:0.76rem">${idx+1}</td>
+                  <td><strong>${esc(it.name)}</strong></td>
+                  <td><span class="cat-badge">${esc(it.cat)}</span></td>
+                  <td>${it.qty%1===0?it.qty:it.qty.toFixed(2)}</td>
+                  <td>${c} ${it.cost.toFixed(2)}</td>
+                  <td class="amt">${c} ${it.total.toLocaleString('en-KE',{minimumFractionDigits:2})}</td>
+                  <td class="ctr"><button class="btn-del" onclick="deleteItem(${it.id})">✕ Remove</button></td>
+                </tr>`).join('')
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">💰 Profit Margin &amp; Selling Price</div>
+    <div class="selling-config">
+      <div>
+        <div class="sc-label">Your Profit Margin (%)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" class="margin-input" value="${f.margin}"
+            min="1" max="500"
+            oninput="getActive().margin=parseFloat(this.value)||0;save();renderFlock()" />
+          <span style="color:var(--straw);font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700">%</span>
+        </div>
+        <div class="sc-explain">Type your desired margin</div>
+      </div>
+      <div class="sc-divider">
+        <div class="sc-label">Suggested Selling Price / Chick</div>
+        <div class="price-display">${c} ${fmt(sellPrice)}</div>
+        <div class="sc-explain">Cost: ${c} ${fmt(costPerChick)} + Profit: ${c} ${fmt(sellPrice-costPerChick)}</div>
+      </div>
+      <div class="sc-divider">
+        <div class="sc-label">Projected Total Revenue</div>
+        <div class="price-display">${c} ${fmt(revenue)}</div>
+        <div class="sc-explain">Net Profit: ${c} ${fmt(profit)}</div>
+      </div>
+    </div>
+
+    <div class="section-title">📊 Cost Breakdown by Category</div>
+    <div class="breakdown">
+      ${catsSorted.length===0
+        ? `<div class="empty-state" style="padding:18px"><em>Breakdown will appear once you add inputs.</em></div>`
+        : catsSorted.map(([cat,amt],i)=>{
+            const pct = totalCost>0?(amt/totalCost*100):0;
+            const col = CAT_COLORS[i%CAT_COLORS.length];
+            return `
+              <div class="bk-row">
+                <div class="bk-name">${esc(cat)}</div>
+                <div class="bk-bar-wrap"><div class="bk-bar" style="width:${pct.toFixed(1)}%;background:${col}"></div></div>
+                <div class="bk-amt" style="color:${col}">
+                  ${c} ${amt.toLocaleString('en-KE',{minimumFractionDigits:2})}
+                  <span class="bk-pct">(${pct.toFixed(0)}%)</span>
+                </div>
+              </div>`;
+          }).join('')
+      }
+    </div>
+  `;
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────────────────────
+function addLoss() {
+  const f      = getActive();
+  const date   = document.getElementById('lossDate').value;
+  const count  = parseInt(document.getElementById('lossCount').value)||0;
+  const reason = document.getElementById('lossReason').value.trim();
+  if (count<=0) { alert('Enter a valid number of deaths.'); return; }
+  if (f.losses.reduce((s,l)=>s+l.count,0)+count > f.chicks) {
+    alert('Total losses cannot exceed the number of chicks started.'); return;
+  }
+  f.losses.push({ id: nextLossId++, date, count, reason });
+  save();
+  renderFlock();
+  renderSidebar();
+}
+
+function deleteLoss(id) {
+  getActive().losses = getActive().losses.filter(l=>l.id!==id);
+  save();
+  renderFlock();
+  renderSidebar();
+}
+
+function addItem() {
+  const f    = getActive();
+  const name = document.getElementById('itemName').value.trim();
+  const cat  = document.getElementById('itemCategory').value;
+  const qty  = parseFloat(document.getElementById('itemQty').value)||0;
+  const cost = parseFloat(document.getElementById('itemCost').value)||0;
+  if (!name) { document.getElementById('itemName').focus(); return; }
+  if (qty<=0||cost<=0) { alert('Please enter a valid quantity and unit cost.'); return; }
+  f.items.push({ id: nextItemId++, name, cat, qty, cost, total: qty*cost });
+  save();
+  renderFlock();
+  renderSidebar();
+  setTimeout(()=>{ const el=document.getElementById('itemName'); if(el)el.focus(); },50);
+}
+
+function deleteItem(id) {
+  getActive().items = getActive().items.filter(i=>i.id!==id);
+  save();
+  renderFlock();
+  renderSidebar();
+}
+
+// Enter key shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key!=='Enter') return;
+  const id = document.activeElement && document.activeElement.id;
+  if (['itemName','itemQty','itemCost'].includes(id)) addItem();
+  if (['lossDate','lossCount','lossReason'].includes(id)) addLoss();
+});
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+const loaded = load();
+if (!loaded || state.flocks.length === 0) {
+  // first time — create a starter flock
+  state.currency = 'KSh';
+  nextFlockId = 1; nextItemId = 1; nextLossId = 1;
+  const id = nextFlockId++;
+  state.flocks = [{ id, name: 'Flock 1', chicks: 100, items: [], losses: [], margin: 30 }];
+  state.activeFlock = id;
+  save();
+}
+renderSidebar();
+renderFlock();
+
+// ── PWA: SERVICE WORKER ───────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { scope: './' })
+    .then(() => console.log('[PWA] Service worker registered'))
+    .catch(e => console.warn('[PWA] SW failed:', e));
+}
+
+// ── PWA: INSTALL PROMPT BANNER ────────────────────────────────────────────────
+let deferredPrompt = null;
+
+const installBanner = document.createElement('div');
+installBanner.id = 'installBanner';
+installBanner.style.cssText = `
+  position:fixed; bottom:0; left:0; right:0; z-index:9999;
+  background:#2C1A0E; color:#E8C97A;
+  padding:14px 20px; display:none;
+  align-items:center; gap:12px;
+  box-shadow:0 -4px 20px rgba(0,0,0,0.3);
+  font-family:'DM Sans',sans-serif; font-size:0.88rem;
+`;
+installBanner.innerHTML = `
+  <span style="font-size:1.5rem">🐥</span>
+  <div style="flex:1">
+    <strong style="font-family:'Syne',sans-serif;font-size:0.9rem">Install ChickCalc</strong><br>
+    <span style="opacity:0.7;font-size:0.78rem">Add to Home Screen — works offline</span>
+  </div>
+  <button id="installBtn" style="
+    background:#4A7C59;color:white;border:none;border-radius:8px;
+    padding:9px 18px;font-family:'Syne',sans-serif;font-weight:700;
+    font-size:0.82rem;cursor:pointer;white-space:nowrap
+  ">Install</button>
+  <button id="dismissBtn" style="
+    background:none;border:none;color:#E8C97A;font-size:1.2rem;
+    cursor:pointer;padding:4px 8px;opacity:0.6
+  ">✕</button>
+`;
+document.body.appendChild(installBanner);
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBanner.style.display = 'flex';
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') installBanner.style.display = 'none';
+  deferredPrompt = null;
+});
+
+document.getElementById('dismissBtn').addEventListener('click', () => {
+  installBanner.style.display = 'none';
+});
+
+window.addEventListener('appinstalled', () => {
+  installBanner.style.display = 'none';
+  deferredPrompt = null;
+});
+</script>
+</body>
+</html>
