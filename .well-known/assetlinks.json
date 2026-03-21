@@ -1,0 +1,19 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.kingori55.twa",
+    "sha256_cert_fingerprints": ["FE:22:31:CF:B2:88:7E:B9:08:3D:3C:E0:91:AF:A0:7A:C7:9F:9C:41:3A:50:2E:87:45:02:D7:A9:69:8A:77:5C"]
+  }
+}]
+```
+
+5. Click **Commit changes**
+
+---
+
+**Step 2 — Verify it's accessible**
+
+After GitHub Pages deploys (2 min), open this URL in your browser to confirm it's live:
+```
+https://kingori55.github.io/chick-calc/.well-known/assetlinks.json
